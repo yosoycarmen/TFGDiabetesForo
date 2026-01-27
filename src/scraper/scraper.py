@@ -4,6 +4,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
+from src.config import PostPaginationMode
 from src.scraper import parser
 
 
@@ -24,13 +25,13 @@ def get_page_html(url: str):
     return ""
 
 
-def fetch_category(content: BeautifulSoup):
-    category = parser.parse_category(content)
+def fetch_category(content: BeautifulSoup, pagination_threads: bool):
+    category = parser.parse_category(content, pagination_threads)
     return category
 
 
-def fetch_thread(content: BeautifulSoup):
-    thread = parser.parse_thread(content)
+def fetch_thread(content: BeautifulSoup, post_pagination : PostPaginationMode):
+    thread = parser.parse_thread(content, post_pagination)
     return thread
 
 
