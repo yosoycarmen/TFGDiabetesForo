@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -12,10 +14,15 @@ import pandas as pd
 
 class ScrapingService:
 
-    def __init__(self):
+    def __init__(self, max_workers: int | None = None):
         self.categories_df = pd.DataFrame()
         self.threads_df = pd.DataFrame()
         self.posts_df = pd.DataFrame()
+        self.max_workers = max_workers or self._default_max_workers()
+
+    @staticmethod
+    def _default_max_workers() -> int:
+        return min(32, (os.cpu_count() or 1) * 5)
 
 
 
@@ -61,25 +68,43 @@ class ScrapingService:
 
 
     def save_threads(self, url, category_name: str, post_pagination: PostPaginationMode) -> None:
-        for url_pag in url:
-            raw = scraper.get_page_html(url_pag)
-            threads = BeautifulSoup(raw, 'html.parser')
-            thread_soup = threads.select("div.col-md-4.mb-4")
-            for threads_content in thread_soup:
-                thread = fetch_thread(threads_content, post_pagination)
-                thread.category = category_name
-                self.thread_to_dataframe(thread)
-                self.save_posts(thread.url, thread.title, category_name)
+        threads_to_fetch: list[Thread] = []
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {
+                executor.submit(scraper.get_page_html, url_pag): url_pag
+                for url_pag in url
+            }
+            for future in as_completed(futures):
+                raw = future.result()
+                if not raw:
+                    continue
+                threads = BeautifulSoup(raw, 'html.parser')
+                thread_soup = threads.select("div.col-md-4.mb-4")
+                for threads_content in thread_soup:
+                    thread = fetch_thread(threads_content, post_pagination)
+                    thread.category = category_name
+                    threads_to_fetch.append(thread)
+
+        for thread in threads_to_fetch:
+            self.thread_to_dataframe(thread)
+            self.save_posts(thread.url, thread.title, category_name)
 
     def save_posts(self, url, thread_name: str, category_name: str) -> None:
-        for url_pag in url:
-            raw = scraper.get_page_html(url_pag)
-            posts = BeautifulSoup(raw, 'html.parser')
-            posts_list = fetch_posts(posts)
-            for post in posts_list:
-                post.category = category_name
-                post.thread = thread_name
-                self.post_to_dataframe(post)
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {
+                executor.submit(scraper.get_page_html, url_pag): url_pag
+                for url_pag in url
+            }
+            for future in as_completed(futures):
+                raw = future.result()
+                if not raw:
+                    continue
+                posts = BeautifulSoup(raw, 'html.parser')
+                posts_list = fetch_posts(posts)
+                for post in posts_list:
+                    post.category = category_name
+                    post.thread = thread_name
+                    self.post_to_dataframe(post)
 
     def category_to_dataframe(self, category: Category):
         category_data = [
@@ -125,5 +150,4 @@ class ScrapingService:
 if __name__ == "__main__":
     scraping_service = ScrapingService()
     scraping_service.run_scraping(ScrapingMode.LATEST)
-
 
