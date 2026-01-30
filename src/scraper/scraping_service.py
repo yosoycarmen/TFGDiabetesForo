@@ -5,6 +5,8 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 from src.config import Config, PostPaginationMode, ScrapingMode
+from src.etl import build_clean_posts
+from src.etl.build_clean_posts import DataCleaner
 from src.scraper import scraper
 from src.scraper.models import Category, Thread, Post
 from src.scraper.scraper import fetch_category, fetch_thread, fetch_posts
@@ -122,6 +124,7 @@ class ScrapingService:
         thread_data = [{
             "name": thread.title,
             "comments": thread.comments,
+            "category": thread.category,
             "likes": thread.likes,
             "url": thread.url,
         }]
@@ -134,6 +137,8 @@ class ScrapingService:
             "timestamp": post.timestamp,
             "content": post.content,
             "likes": post.likes,
+            "category" : post.category,
+            "thread": post.thread,
         }]
         post_data = pd.DataFrame(post_data)
         self.posts_df = pd.concat([self.posts_df, post_data], ignore_index=True)
@@ -148,6 +153,8 @@ class ScrapingService:
         tmp.replace(path)
 
 if __name__ == "__main__":
-    scraping_service = ScrapingService()
-    scraping_service.run_scraping(ScrapingMode.LATEST)
+    scrape_runer = ScrapingService()
+    scrape_runer.run_scraping()
+    cleaner = DataCleaner()
+    cleaner.clean_dataset()
 

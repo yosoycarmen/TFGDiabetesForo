@@ -76,6 +76,8 @@ def extract_clean_response(post_content):
     return post_content.get_text(strip=True)
 
 def get_paginated_url( mode, base_url):
+    if isinstance(base_url, list):
+        base_url = base_url[0]
     raw = get_page_html(base_url)
     url_list = [base_url]
     content = BeautifulSoup(raw, 'html.parser')
@@ -88,16 +90,19 @@ def get_paginated_url( mode, base_url):
                 page_number = integ_last_page -1
         while page_number <= integ_last_page:
             extension = "?page="+str(page_number)
-            next_url = base_url +extension
+            next_url = base_url + extension
             url_list.append(next_url)
             page_number += 1
     return url_list
 
 def get_page_html(url: str):
     last_exc: requests.RequestException | None = None
+    if isinstance(url, list):
+        url = url[0]
     session = requests.Session()
     for attempt in range(3):
         try:
+
             response = session.get(url, timeout=10)
             response.raise_for_status()
             raw = response.text

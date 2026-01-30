@@ -9,6 +9,8 @@ from src.scraper import parser
 
 
 def get_page_html(url: str):
+    if isinstance(url, list):
+        url = url[0]
     last_exc: requests.RequestException | None = None
     session = requests.Session()
     for attempt in range(3):
