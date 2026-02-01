@@ -1,18 +1,19 @@
 from src.config import Config
 import pandas as pd
 
-csv_path = Config.clean_posts_file.value
-df = pd.read_csv(csv_path)
+class BertEmbeddings:
+    def __init__(self):
+        self.csv_path = Config.clean_posts_file.value
+        self.df = pd.read_csv(self.csv_path)
 
+        self.texts = (
+            self.df["content"]
+            .fillna("")
+            .astype(str)
+        )
 
-texts = (
-    df["content_clean_nostop"]
-    .fillna("")
-    .astype(str)
-)
+    def empty_filter(self):
+        mask = self.texts.str.len() >= 10
+        df = self.df[mask].copy()
+        texts = self.texts[mask].tolist()
 
-mask = texts.str.len() >= 10
-df = df[mask].copy()
-texts = texts[mask].tolist()
-
-len(df), df["content_clean_basic"].head()

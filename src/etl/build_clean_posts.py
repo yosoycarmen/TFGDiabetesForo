@@ -16,14 +16,33 @@ class DataCleaner:
         if "content" not in df.columns:
             raise ValueError("El CSV no tiene columna 'content'.")
 
-        # Crea/actualiza la columna limpia
-        df["content_clean_basic"] = df["content"].astype(str).map(self.basic_clean)
+        df["content"] = df["content"].map(self._to_text).map(self.basic_clean)
 
         # Sobrescribe el MISMO CSV
         df.to_csv(path, index=False, encoding="utf-8")
         print(f"✅ CSV actualizado (sobrescrito) en: {path}")
 
         return df
+
+    def _to_text(self, x) -> str:
+
+        if pd.isna(x):
+            return ""
+        if isinstance(x, list):
+            return " ".join(map(str, x))
+
+        s = str(x).strip()
+
+        # Si parece una lista en string, intenta parsearla
+        if s.startswith("[") and s.endswith("]"):
+            try:
+                parsed = ast.literal_eval(s)
+                if isinstance(parsed, list):
+                    return " ".join(map(str, parsed))
+            except Exception:
+                pass
+
+        return s
 
     def basic_clean(self, text: str) -> str:
         # Solo regex -> sustituye signos por espacios y normaliza espacios

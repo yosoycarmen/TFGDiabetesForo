@@ -1,3 +1,4 @@
+import re
 import time
 from urllib.parse import urljoin
 
@@ -83,7 +84,7 @@ def get_paginated_url( mode, base_url):
     content = BeautifulSoup(raw, 'html.parser')
     if content.find("a", class_="page-link", attrs={"aria-label": "Last"}):
         last_page = content.find("a", class_="page-link", attrs={"aria-label": "Last"}).get("href")
-        integ_last_page = int(last_page[-1])
+        integ_last_page = int(re.search(r"page=(\d+)", last_page).group(1))
         page_number = 2
         if mode == "last_two":
             if integ_last_page > 2:

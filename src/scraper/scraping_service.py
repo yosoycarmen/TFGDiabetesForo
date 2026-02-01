@@ -64,6 +64,8 @@ class ScrapingService:
         categories = categories.find_all("a", class_="card-link")
         for category_content in categories:
             category = fetch_category(category_content, paginate_threads)
+            print(f"\n=== START CATEGORY: {category.name} ===")
+            print("URL:", category.url, type(category.url))
             self.category_to_dataframe(category)
             self.save_threads(category.url, category.name, post_pagination)
 
@@ -155,6 +157,4 @@ class ScrapingService:
 if __name__ == "__main__":
     scrape_runer = ScrapingService()
     scrape_runer.run_scraping()
-    cleaner = DataCleaner()
-    cleaner.clean_dataset()
 
