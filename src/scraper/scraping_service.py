@@ -31,6 +31,9 @@ class ScrapingService:
     def run_scraping(self, mode: ScrapingMode = ScrapingMode.FULL):
         if mode == ScrapingMode.LATEST:
             self.run_latest_posts_scraping()
+        elif mode in (ScrapingMode.FULL_1, ScrapingMode.FULL_2, ScrapingMode.FULL_3):
+            segment = int(mode.value.split()[-1])
+            self.run_full_scraping(category_segment=segment)
         else:
             self.run_full_scraping()
 
@@ -45,10 +48,11 @@ class ScrapingService:
         self._write_csv(self.posts_df, Path(Config.raw_posts_file.value))
 
 
-    def run_full_scraping(self):
+    def run_full_scraping(self, category_segment: int | None = None):
         self.save_categories(
             paginate_threads=True,
             post_pagination=PostPaginationMode.ALL,
+            category_segment=category_segment,
         )
         self._write_csv(self.categories_df, Path(Config.raw_categories_file.value))
         self._write_csv(self.threads_df, Path(Config.raw_threads_file.value))
@@ -58,10 +62,15 @@ class ScrapingService:
 
     def save_categories(self,
         paginate_threads: bool,
-        post_pagination: PostPaginationMode,) :
+        post_pagination: PostPaginationMode,
+        category_segment: int | None = None,) :
         raw = scraper.get_page_html(Config.forum_categories_url.value)
         categories = BeautifulSoup(raw, 'html.parser')
         categories = categories.find_all("a", class_="card-link")
+        categories = list(categories)
+        if category_segment is not None:
+            start, end = self._category_segment_range(len(categories), category_segment)
+            categories = categories[start:end]
         for category_content in categories:
             category = fetch_category(category_content, paginate_threads)
             self.category_to_dataframe(category)
@@ -152,9 +161,24 @@ class ScrapingService:
         df.to_csv(tmp, index=False, encoding="utf-8", lineterminator="\n")
         tmp.replace(path)
 
+    @staticmethod
+    def _category_segment_range(total_categories: int, segment: int) -> tuple[int, int]:
+        if segment not in (1, 2, 3):
+            raise ValueError("segment must be 1, 2, or 3")
+        if total_categories <= 0:
+            return (0, 0)
+        base_size = total_categories // 3
+        remainder = total_categories % 3
+        sizes = [
+            base_size + (1 if index < remainder else 0)
+            for index in range(3)
+        ]
+        start = sum(sizes[:segment - 1])
+        end = start + sizes[segment - 1]
+        return (start, end)
+
 if __name__ == "__main__":
     scrape_runer = ScrapingService()
     scrape_runer.run_scraping()
     cleaner = DataCleaner()
     cleaner.clean_dataset()
-

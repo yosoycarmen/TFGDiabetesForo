@@ -23,6 +23,9 @@ class Config(Enum):
 class ScrapingMode(Enum):
     LATEST = "latest"
     FULL = "full"
+    FULL_1 = "full 1"
+    FULL_2 = "full 2"
+    FULL_3 = "full 3"
 
 
 class PostPaginationMode(Enum):
